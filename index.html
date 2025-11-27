@@ -157,6 +157,29 @@
             border: 1px solid var(--border);
             color: var(--text-main);
         }
+        
+        /* Botones de acción dentro del modal selector */
+        .action-btn {
+            width: 100%;
+            padding: 12px 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background-color: var(--card-bg);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-align: left;
+        }
+        
+        .action-btn:hover {
+            background-color: #f1f5f9;
+            border-color: var(--primary);
+        }
+
 
         /* Input File Oculto */
         .file-input {
@@ -209,7 +232,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* --- MODAL DE RECORTE --- */
+        /* --- MODALES (Recorte y Selector) --- */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -224,8 +247,14 @@
             padding: 15px;
             backdrop-filter: blur(4px);
         }
-
-        .modal-content {
+        
+        .modal-overlay.selector-modal {
+            background: rgba(0, 0, 0, 0.6); /* Un poco más claro para el selector */
+            backdrop-filter: none;
+        }
+        
+        /* Contenido del Modal de Recorte */
+        #crop-modal .modal-content {
             background: white;
             width: 100%;
             max-width: 600px;
@@ -235,7 +264,7 @@
             overflow: hidden;
             max-height: 90vh; /* Evita que se salga en pantallas pequeñas */
         }
-
+        
         .modal-header {
             padding: 15px 20px;
             border-bottom: 1px solid var(--border);
@@ -269,6 +298,34 @@
             width: auto;
             padding: 10px 20px;
             min-height: 44px;
+        }
+        
+        /* Contenido del Modal Selector de Archivo */
+        #selector-modal .modal-content {
+            background: white;
+            width: 100%;
+            max-width: 400px;
+            border-radius: 12px;
+            padding: 20px;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        #selector-modal h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+        
+        #selector-modal .action-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
         }
 
         /* Footer */
@@ -315,11 +372,13 @@
                 <img id="img-front" alt="Frontal">
             </div>
 
-            <button class="btn btn-primary" onclick="selectFile('front')">
+            <button class="btn btn-primary" onclick="showSelector('front')">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 Subir Frontal
             </button>
-            <input type="file" id="input-front" class="file-input" accept="image/*" capture="environment">
+            <!-- Inputs necesarios: uno para la cámara y otro para la galería -->
+            <input type="file" id="input-front-camera" class="file-input" accept="image/*" capture="environment">
+            <input type="file" id="input-front-gallery" class="file-input" accept="image/*">
         </div>
 
         <!-- Tarjeta Trasera -->
@@ -335,11 +394,13 @@
                 <img id="img-back" alt="Trasera">
             </div>
 
-            <button class="btn btn-primary" onclick="selectFile('back')">
+            <button class="btn btn-primary" onclick="showSelector('back')">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 Subir Trasera
             </button>
-            <input type="file" id="input-back" class="file-input" accept="image/*" capture="environment">
+            <!-- Inputs necesarios: uno para la cámara y otro para la galería -->
+            <input type="file" id="input-back-camera" class="file-input" accept="image/*" capture="environment">
+            <input type="file" id="input-back-gallery" class="file-input" accept="image/*">
         </div>
     </div>
 
@@ -353,7 +414,7 @@
         </button>
     </div>
 
-    <!-- Modal de Recorte -->
+    <!-- Modal de Recorte (Mantenido de tu diseño original) -->
     <div class="modal-overlay" id="crop-modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -364,11 +425,32 @@
                 <img id="image-to-crop" style="max-width:100%;">
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-secondary" onclick="closeModal('crop-modal')">Cancelar</button>
                 <button class="btn btn-primary" onclick="confirmCrop()">Confirmar Recorte</button>
             </div>
         </div>
     </div>
+    
+    <!-- NUEVO: Modal Selector de Archivo (Para elegir Cámara o Galería) -->
+    <div class="modal-overlay selector-modal" id="selector-modal" onclick="closeModal('selector-modal', event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 id="selector-title">Seleccionar Fuente de Imagen</h3>
+            <div class="action-list">
+                <!-- Opción 1: Tomar Foto (Cámara) -->
+                <button class="action-btn" onclick="triggerInput('camera')">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    Tomar Foto (Cámara)
+                </button>
+                <!-- Opción 2: Seleccionar Archivo (Galería) -->
+                <button class="action-btn" onclick="triggerInput('gallery')">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    Seleccionar de Galería
+                </button>
+            </div>
+            <button class="btn btn-secondary" onclick="closeModal('selector-modal')">Cancelar</button>
+        </div>
+    </div>
+
 
     <footer>
         &copy; 2025 Generador de Copias INE | by Mario Vazquez
@@ -391,20 +473,44 @@
         };
 
         // Elementos DOM
-        const modal = document.getElementById('crop-modal');
+        const cropModal = document.getElementById('crop-modal');
+        const selectorModal = document.getElementById('selector-modal');
+        const selectorTitle = document.getElementById('selector-title');
         const cropImg = document.getElementById('image-to-crop');
         const downloadArea = document.getElementById('download-area');
 
-        // --- GESTIÓN DE ARCHIVOS ---
+        // --- GESTIÓN DE ARCHIVOS Y SELECTOR ---
         
-        // Simular clic en input file
-        function selectFile(side) {
-            document.getElementById(`input-${side}`).click();
+        // Función para mostrar el modal selector (se llama al hacer clic en los botones principales)
+        function showSelector(side) {
+            state.currentSide = side;
+            selectorTitle.textContent = side === 'front' ? "Subir Parte Frontal" : "Subir Parte Trasera";
+            selectorModal.style.display = 'flex';
+        }
+        
+        // Función que simula el clic en el input correcto (cámara o galería)
+        function triggerInput(source) {
+            closeModal('selector-modal'); // Cerrar el selector inmediatamente
+            
+            let inputId;
+            if (source === 'camera') {
+                // Input con capture="environment" para abrir la cámara
+                inputId = `input-${state.currentSide}-camera`;
+            } else { // 'gallery'
+                // Input sin capture para abrir la galería/archivos
+                inputId = `input-${state.currentSide}-gallery`;
+            }
+            
+            document.getElementById(inputId).click();
         }
 
-        // Event Listeners para inputs
-        document.getElementById('input-front').addEventListener('change', (e) => handleFile(e, 'front'));
-        document.getElementById('input-back').addEventListener('change', (e) => handleFile(e, 'back'));
+        // Event Listeners para inputs de cámara y galería
+        // Frontal
+        document.getElementById('input-front-camera').addEventListener('change', (e) => handleFile(e, 'front'));
+        document.getElementById('input-front-gallery').addEventListener('change', (e) => handleFile(e, 'front'));
+        // Trasera
+        document.getElementById('input-back-camera').addEventListener('change', (e) => handleFile(e, 'back'));
+        document.getElementById('input-back-gallery').addEventListener('change', (e) => handleFile(e, 'back'));
 
         // Manejar archivo seleccionado
         function handleFile(event, side) {
@@ -414,7 +520,7 @@
             // Leer archivo
             const reader = new FileReader();
             reader.onload = (e) => {
-                // Abrir modal con la imagen
+                // Abrir modal de recorte con la imagen
                 openCropper(e.target.result, side);
             };
             reader.readAsDataURL(file);
@@ -428,7 +534,7 @@
         function openCropper(imageSrc, side) {
             state.currentSide = side;
             cropImg.src = imageSrc;
-            modal.style.display = 'flex';
+            cropModal.style.display = 'flex';
 
             // Destruir instancia previa si existe
             if (state.cropper) state.cropper.destroy();
@@ -449,9 +555,18 @@
             });
         }
 
-        function closeModal() {
-            modal.style.display = 'none';
-            if (state.cropper) {
+        function closeModal(modalId, event) {
+            // Prevenir cerrar al hacer clic en el contenido del selector
+            // Esto es necesario solo para el modal selector
+            if (modalId === 'selector-modal' && event && event.target.id !== modalId) return;
+
+            const targetModal = document.getElementById(modalId);
+            if (targetModal) {
+                targetModal.style.display = 'none';
+            }
+            
+            // Destruir cropper solo si cerramos el modal de recorte
+            if (modalId === 'crop-modal' && state.cropper) {
                 state.cropper.destroy();
                 state.cropper = null;
             }
@@ -477,7 +592,7 @@
             // Actualizar UI
             updateUI(state.currentSide, resultDataUrl);
             
-            closeModal();
+            closeModal('crop-modal');
             checkCompletion();
         }
 
