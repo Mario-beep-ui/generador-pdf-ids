@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Herramienta INE a PDF</title>
+    
+    <!-- Librería Cropper.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    
+    <style>
+        /* --- ESTILOS GENERALES Y RESPONSIVOS --- */
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary: #4b5563;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --success: #10b981;
+            --border: #e2e8f0;
+            --text-main: #1e293b;
+            --text-light: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent; /* Elimina flash azul en móviles */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: var(--text-main);
+            margin: 10px 0;
+            font-size: 1.8rem;
+            text-align: center;
+        }
+
+        p.description {
+            color: var(--text-light);
+            text-align: center;
+            max-width: 600px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        /* --- CONTENEDOR GRID RESPONSIVO --- */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 30px;
+        }
+
+        /* --- TARJETAS --- */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 2px dashed var(--border);
+            transition: border-color 0.3s ease;
+            position: relative;
+        }
+
+        .card.completed {
+            border-color: var(--success);
+            border-style: solid;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--text-main);
+        }
+
+        /* Área de Vista Previa */
+        .preview-box {
+            width: 100%;
+            height: 220px; /* Altura fija para consistencia visual */
+            background-color: #f1f5f9;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .preview-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+
+        .preview-placeholder {
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+
+        /* --- BOTONES (Optimizados para Touch) --- */
+        .btn {
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 10px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            /* Tamaño mínimo táctil */
+            min-height: 48px; 
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: white;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        /* Input File Oculto */
+        .file-input {
+            display: none;
+        }
+
+        /* Icono de Check */
+        .check-icon {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--success);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        /* --- ÁREA DE DESCARGA --- */
+        .download-area {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            display: none; /* Se activa con JS */
+            animation: slideUp 0.4s ease-out;
+        }
+
+        .download-btn {
+            background-color: #059669;
+            font-size: 1.1rem;
+            margin-top: 15px;
+        }
+
+        .download-btn:hover {
+            background-color: #047857;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- MODAL DE RECORTE --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: white;
+            width: 100%;
+            max-width: 600px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            max-height: 90vh; /* Evita que se salga en pantallas pequeñas */
+        }
+
+        .modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+
+        .crop-viewport {
+            height: 50vh; /* Altura responsiva */
+            min-height: 300px;
+            background: #000;
+            position: relative;
+        }
+
+        .modal-footer {
+            padding: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            border-top: 1px solid var(--border);
+            background: #f9fafb;
+        }
+
+        .modal-footer .btn {
+            width: auto;
+            padding: 10px 20px;
+            min-height: 44px;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: auto;
+            padding-top: 40px;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        /* Ajustes específicos para móviles muy pequeños */
+        @media (max-width: 480px) {
+            .modal-footer {
+                flex-direction: column;
+            }
+            .modal-footer .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Generador INE PDF</h1>
+    <p class="description">
+        Sube las fotos de tu identificación, recórtalas y descarga un PDF listo para imprimir. 
+        Tus imágenes se procesan localmente en tu dispositivo.
+    </p>
+
+    <!-- Contenedor Principal Grid -->
+    <div class="grid-container">
+        
+        <!-- Tarjeta Frontal -->
+        <div class="card" id="card-front">
+            <div class="check-icon" id="check-front">✓</div>
+            <div class="card-title">1. Parte Frontal</div>
+            
+            <div class="preview-box" id="box-front">
+                <div class="preview-placeholder">
+                    <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span>Sin imagen</span>
+                </div>
+                <img id="img-front" alt="Frontal">
+            </div>
+
+            <button class="btn btn-primary" onclick="selectFile('front')">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                Subir Frontal
+            </button>
+            <input type="file" id="input-front" class="file-input" accept="image/*">
+        </div>
+
+        <!-- Tarjeta Trasera -->
+        <div class="card" id="card-back">
+            <div class="check-icon" id="check-back">✓</div>
+            <div class="card-title">2. Parte Trasera</div>
+            
+            <div class="preview-box" id="box-back">
+                <div class="preview-placeholder">
+                    <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span>Sin imagen</span>
+                </div>
+                <img id="img-back" alt="Trasera">
+            </div>
+
+            <button class="btn btn-primary" onclick="selectFile('back')">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                Subir Trasera
+            </button>
+            <input type="file" id="input-back" class="file-input" accept="image/*">
+        </div>
+    </div>
+
+    <!-- Sección de Descarga (Oculta al inicio) -->
+    <div id="download-area" class="download-area">
+        <h2 style="margin-top:0; color: #059669;">¡Imágenes Listas!</h2>
+        <p>Se generará un PDF tamaño Carta con las medidas oficiales.</p>
+        <button class="btn btn-primary download-btn" onclick="generatePDF()">
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Descargar PDF
+        </button>
+    </div>
+
+    <!-- Modal de Recorte -->
+    <div class="modal-overlay" id="crop-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Recortar Imagen</h3>
+                <span style="font-size:0.8rem; color:#666;">Ajusta los bordes</span>
+            </div>
+            <div class="crop-viewport">
+                <img id="image-to-crop" style="max-width:100%;">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="confirmCrop()">Confirmar Recorte</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2024 Generador de Copias INE | Privacidad: No subimos tus datos.
+    </footer>
+
+    <!-- LIBRERÍAS EXTERNAS (CDN) -->
+    <!-- jsPDF para generar el PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Cropper.js para la interfaz de recorte -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+    <!-- LÓGICA DE LA APLICACIÓN -->
+    <script>
+        // --- ESTADO DE LA APP ---
+        const state = {
+            front: null, // DataURL de imagen final
+            back: null,  // DataURL de imagen final
+            currentSide: null, // 'front' o 'back'
+            cropper: null
+        };
+
+        // Elementos DOM
+        const modal = document.getElementById('crop-modal');
+        const cropImg = document.getElementById('image-to-crop');
+        const downloadArea = document.getElementById('download-area');
+
+        // --- GESTIÓN DE ARCHIVOS ---
+        
+        // Simular clic en input file
+        function selectFile(side) {
+            document.getElementById(`input-${side}`).click();
+        }
+
+        // Event Listeners para inputs
+        document.getElementById('input-front').addEventListener('change', (e) => handleFile(e, 'front'));
+        document.getElementById('input-back').addEventListener('change', (e) => handleFile(e, 'back'));
+
+        // Manejar archivo seleccionado
+        function handleFile(event, side) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Leer archivo
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                // Abrir modal con la imagen
+                openCropper(e.target.result, side);
+            };
+            reader.readAsDataURL(file);
+
+            // Resetear input para permitir re-subir la misma imagen si se equivocó
+            event.target.value = '';
+        }
+
+        // --- LÓGICA DEL CROPPER ---
+
+        function openCropper(imageSrc, side) {
+            state.currentSide = side;
+            cropImg.src = imageSrc;
+            modal.style.display = 'flex';
+
+            // Destruir instancia previa si existe
+            if (state.cropper) state.cropper.destroy();
+
+            // Iniciar Cropper.js
+            state.cropper = new Cropper(cropImg, {
+                viewMode: 1, // Restringe el cuadro de recorte dentro del canvas
+                dragMode: 'move', // Permite mover la imagen
+                autoCropArea: 0.85,
+                responsive: true,
+                restore: false,
+                guides: true,
+                center: true,
+                highlight: false,
+                background: false, // Fondo negro para mejor contraste
+                minContainerWidth: 300,
+                minContainerHeight: 300
+            });
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+            if (state.cropper) {
+                state.cropper.destroy();
+                state.cropper = null;
+            }
+        }
+
+        function confirmCrop() {
+            if (!state.cropper) return;
+
+            // Obtener canvas recortado
+            // Usamos un tamaño generoso para mantener calidad al imprimir
+            const canvas = state.cropper.getCroppedCanvas({
+                width: 1200, 
+                imageSmoothingEnabled: true,
+                imageSmoothingQuality: 'high'
+            });
+
+            // Convertir a base64 (JPEG para menor peso, calidad 0.9)
+            const resultDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+            // Guardar en estado
+            state[state.currentSide] = resultDataUrl;
+
+            // Actualizar UI
+            updateUI(state.currentSide, resultDataUrl);
+            
+            closeModal();
+            checkCompletion();
+        }
+
+        // --- ACTUALIZACIÓN DE UI ---
+
+        function updateUI(side, imageUrl) {
+            const imgEl = document.getElementById(`img-${side}`);
+            const placeholderEl = document.querySelector(`#box-${side} .preview-placeholder`);
+            const checkEl = document.getElementById(`check-${side}`);
+            const cardEl = document.getElementById(`card-${side}`);
+
+            // Mostrar imagen
+            imgEl.src = imageUrl;
+            imgEl.style.display = 'block';
+            
+            // Ocultar placeholder
+            placeholderEl.style.display = 'none';
+            
+            // Mostrar check y borde verde
+            checkEl.style.display = 'flex';
+            cardEl.classList.add('completed');
+        }
+
+        function checkCompletion() {
+            // Si ambos lados tienen datos, mostrar descarga
+            if (state.front && state.back) {
+                downloadArea.style.display = 'block';
+                // Scroll suave hacia el botón
+                downloadArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        // --- GENERACIÓN DE PDF ---
+
+        function generatePDF() {
+            // Importar jsPDF desde el objeto window
+            const { jsPDF } = window.jspdf;
+
+            // Configuración: Carta (Letter), Vertical (Portrait), Unidades: cm
+            // Letter size: 21.59 cm x 27.94 cm
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'cm',
+                format: 'letter'
+            });
+
+            const PAGE_WIDTH = 21.59;
+            const PAGE_HEIGHT = 27.94;
+
+            // Medidas Oficiales INE (aprox tarjeta crédito)
+            // Usaremos 8.6cm x 5.4cm
+            const IMG_W = 8.6;
+            const IMG_H = 5.4;
+            const GAP = 1.0; // Espacio entre las dos imágenes
+
+            // Calcular posición para centrar el bloque de dos imágenes
+            const totalWidth = (IMG_W * 2) + GAP;
+            const startX = (PAGE_WIDTH - totalWidth) / 2;
+            const startY = (PAGE_HEIGHT - IMG_H) / 2; // Centrado vertical
+
+            // Coordenadas
+            const x1 = startX;
+            const x2 = startX + IMG_W + GAP;
+
+            // 1. Agregar Frontal
+            doc.addImage(state.front, 'JPEG', x1, startY, IMG_W, IMG_H);
+            
+            // 2. Agregar Trasera
+            doc.addImage(state.back, 'JPEG', x2, startY, IMG_W, IMG_H);
+
+            // 3. Dibujar bordes finos (guía de corte) - Color gris claro
+            doc.setDrawColor(200);
+            doc.setLineWidth(0.01);
+            doc.rect(x1, startY, IMG_W, IMG_H); // Marco frontal
+            doc.rect(x2, startY, IMG_W, IMG_H); // Marco trasero
+
+            // 4. Texto informativo
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            
+            // Título superior
+            doc.text("Copia de Identificación", PAGE_WIDTH / 2, startY - 1, { align: 'center' });
+            
+            // Footer inferior
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text("Generado automáticamente", PAGE_WIDTH / 2, PAGE_HEIGHT - 2, { align: 'center' });
+
+            // Descargar
+            doc.save("Copia_INE_Lista.pdf");
+        }
+    </script>
+</body>
+</html>
