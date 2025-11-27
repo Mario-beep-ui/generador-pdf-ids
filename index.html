@@ -640,7 +640,7 @@
             });
 
             const PAGE_WIDTH = 21.59;
-            const PAGE_HEIGHT = 27.94;
+            const MARGIN_TOP = 2.0; // Margen superior de 2 cm, como solicitaste
 
             // Medidas Oficiales INE (aprox tarjeta crédito)
             // Usaremos 8.6cm x 5.4cm
@@ -648,10 +648,12 @@
             const IMG_H = 5.4;
             const GAP = 1.0; // Espacio entre las dos imágenes
 
-            // Calcular posición para centrar el bloque de dos imágenes
+            // Calcular posición para centrar horizontalmente
             const totalWidth = (IMG_W * 2) + GAP;
             const startX = (PAGE_WIDTH - totalWidth) / 2;
-            const startY = (PAGE_HEIGHT - IMG_H) / 2; // Centrado vertical
+            
+            // Posición vertical: MARGEN_TOP (2 cm)
+            const startY = MARGIN_TOP; 
 
             // Coordenadas
             const x1 = startX;
@@ -669,18 +671,7 @@
             doc.rect(x1, startY, IMG_W, IMG_H); // Marco frontal
             doc.rect(x2, startY, IMG_W, IMG_H); // Marco trasero
 
-            // 4. Texto informativo
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(10);
-            doc.setTextColor(100);
             
-            // Título superior
-            doc.text("", PAGE_WIDTH / 2, startY - 1, { align: 'center' });
-            
-            // Footer inferior
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.text(" ", PAGE_WIDTH / 2, PAGE_HEIGHT - 2, { align: 'center' });
 
             // Descargar
             doc.save("Copia_INE_Lista.pdf");
