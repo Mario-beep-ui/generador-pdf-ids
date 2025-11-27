@@ -675,12 +675,12 @@
             doc.setTextColor(100);
             
             // Título superior
-            doc.text("Copia de Identificación", PAGE_WIDTH / 2, startY - 1, { align: 'center' });
+            doc.text("", PAGE_WIDTH / 2, startY - 1, { align: 'center' });
             
             // Footer inferior
             doc.setFontSize(8);
             doc.setTextColor(150);
-            doc.text("Generado automáticamente", PAGE_WIDTH / 2, PAGE_HEIGHT - 2, { align: 'center' });
+            doc.text(" ", PAGE_WIDTH / 2, PAGE_HEIGHT - 2, { align: 'center' });
 
             // Descargar
             doc.save("Copia_INE_Lista.pdf");
@@ -688,4 +688,3 @@
     </script>
 </body>
 </html>
-
